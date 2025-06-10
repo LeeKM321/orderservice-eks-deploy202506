@@ -170,30 +170,26 @@ pipeline {
                                 echo "Updating ${service} image tag in k8s repo..."
                                 sed -i 's#^image: .*#image: ${ECR_URL}/${service}:${newTag}#' ./msa-chart/charts/${service}/values.yaml
                             """
-
-                            // values.yaml 파일의 image 태그가 수정이 완료되면
-                            // ArgoCD가 담당하는 깃 저장소로 변경사항을 commit & push
-                            // 마지막에 클론한 프로젝트 폴더를 지우는 이유는, 다음 파이프라인 로직을 위해서.
-                            // 기존에 폴더가 존재한다면 다음 clone 시에 에러가 발생하면서 파이프라인이 멈춰요.
-                            sh """
-                                cd /var/jenkins_home/workspace/orderservice-k8s202506
-                                git config user.name "Kyoungmin Lee"
-                                git config user.email "stephen4951@gmail.com"
-                                git remote -v
-                                git add .
-                                git commit -m "Update images for changed services ${env.BUILD_ID}"
-                                git push origin main
-
-                                echo "push complete"
-                                cd ..
-                                rm -rf orderservice-k8s202506
-                                ls -a
-                            """
-
                         }
 
+                        // values.yaml 파일의 image 태그가 수정이 완료되면
+                        // ArgoCD가 담당하는 깃 저장소로 변경사항을 commit & push
+                        // 마지막에 클론한 프로젝트 폴더를 지우는 이유는, 다음 파이프라인 로직을 위해서.
+                        // 기존에 폴더가 존재한다면 다음 clone 시에 에러가 발생하면서 파이프라인이 멈춰요.
+                        sh """
+                            cd /var/jenkins_home/workspace/orderservice-k8s202506
+                            git config user.name "Kyoungmin Lee"
+                            git config user.email "stephen4951@gmail.com"
+                            git remote -v
+                            git add .
+                            git commit -m "Update images for changed services ${env.BUILD_ID}"
+                            git push origin main
 
-
+                            echo "push complete"
+                            cd ..
+                            rm -rf orderservice-k8s202506
+                            ls -a
+                        """
                     }
                 }
             }
