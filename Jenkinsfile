@@ -111,6 +111,9 @@ pipeline {
                     withAWS(region: "${REGION}", credentials: "aws-key") {
                         def changedServices = env.CHANGED_SERVICES.split(",")
                         changedServices.each { service ->
+                            // 여기서 원하는 버전을 정하거나, 커밋 태그 등을 붙여서 이미지 이름을 만들자.
+                            def newTag = "1.0.1"
+
                             sh """
                             # ECR에 이미지를 push하기 위해 인증 정보를 대신 검증해 주는 도구 다운로드.
                             # /usr/local/bin/ 경로에 해당 파일을 이동
@@ -123,11 +126,68 @@ pipeline {
                             mkdir -p ~/.docker
                             echo '{"credHelpers": {"${ECR_URL}": "ecr-login"}}' > ~/.docker/config.json
 
-                            docker build -t ${service}:latest ${service}
-                            docker tag ${service}:latest ${ECR_URL}/${service}:latest
-                            docker push ${ECR_URL}/${service}:latest
+                            docker build -t ${service}:${newTag} ${service}
+                            docker tag ${service}:${newTag} ${ECR_URL}/${service}:${newTag}
+                            docker push ${ECR_URL}/${service}:${newTag}
                             """
                         }
+                    }
+                }
+            }
+        }
+
+        stage('Update k8s Repo') {
+            when {
+                expression { env.CHANGED_SERVICES != "" } // 변경된 서비스가 있을 때에만 실행
+            }
+
+            steps {
+                script {
+                    // k8s 레포지토리를 클론하자.
+                    // 현재 stage가 활동하는 경로는 /var/jenkins_home/workspace/pipeline폴더
+                    // pipeline폴더 말고 workspace에 클론 받고 싶어서 cd .. 실행
+                    sh '''
+                        cd ..
+                        ls -a
+                        git clone https://github.com/LeeKM321/orderservice-k8s202506.git
+                    '''
+
+                    def changedServices = env.CHANGED_SERVICES.split(",")
+                    changedServices.each { service ->
+                        def newTag = "1.0.1" // 이미지 빌드할 때 사용한 태그를 동일하게 사용 (환경변수에 넣어넣고 끌고와도 됨.)
+
+                        // msa-chart/charts/<service>/values.yaml 파일 내의 image 태그를 교체
+                        // sed: 스트림 편집기(stream editor), 텍스트 파일을 수정하는 데 사용.
+                        // s#^ -> 라인의 시작을 의미.
+                        // image: 텍스트 image: 이라는 것을 찾아라.
+                        // .*image: image 다음에 오는 모든 문자
+                        // 종합: 'image:' <- 요렇게 시작하는 텍스트를 찾아서 image: 다음에 오는 문자를 내가 지정한 텍스트로 수정.
+                        sh """
+                            cd /var/jenkins_home/workspace/orderservice-k8s202506
+                            ls -a
+                            echo "Updating ${service} image tag in k8s repo..."
+                            sed -i 's#^image: .*image: ${ECR_URL}/${service}:${newTag}#' ./msa-chart/charts/${service}/values.yaml
+                        """
+
+                        // values.yaml 파일의 image 태그가 수정이 완료되면
+                        // ArgoCD가 담당하는 깃 저장소로 변경사항을 commit & push
+                        // 마지막에 클론한 프로젝트 폴더를 지우는 이유는, 다음 파이프라인 로직을 위해서.
+                        // 기존에 폴더가 존재한다면 다음 clone 시에 에러가 발생하면서 파이프라인이 멈춰요.
+                        sh """
+                            cd /var/jenkins_home/workspace/orderservice-k8s202506
+                            git config user.name "Kyoungmin Lee"
+                            git config user.email "stephen4951@gmail.com"
+                            git remote -v
+                            git add .
+                            git commit -m "Update images for changed services ${env.BUILD_ID}"
+                            git push origin main
+
+                            echo "push complete"
+                            cd ..
+                            rm -rf orderservice-k8s202506
+                            ls -a
+                        """
+
                     }
 
 

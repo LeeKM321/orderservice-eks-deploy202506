@@ -258,6 +258,11 @@ public class UserController {
 
     }
 
+    @GetMapping("/k8s-stage-test")
+    public String k8sTest() {
+        return "image tag update complete!";
+    }
+
 
 }
 
