@@ -112,8 +112,8 @@ pipeline {
                     withAWS(region: "${REGION}", credentials: "aws-key") {
                         def changedServices = env.CHANGED_SERVICES.split(",")
                         changedServices.each { service ->
-                            // 여기서 원하는 버전을 정하거나, 커밋 태그 등을 붙여서 이미지 이름을 만들자.
-                            def newTag = "1.0.1"
+                            // 여기서 원하는 버전을 정하거나, 커밋 태그 등을 붙여서 이미지 이름을 만들자. (빌드 번호)
+                            def newTag = "1.0.2"
 
                             sh """
                             # ECR에 이미지를 push하기 위해 인증 정보를 대신 검증해 주는 도구 다운로드.
@@ -156,7 +156,7 @@ pipeline {
 
                         def changedServices = env.CHANGED_SERVICES.split(",")
                         changedServices.each { service ->
-                            def newTag = "1.0.1" // 이미지 빌드할 때 사용한 태그를 동일하게 사용 (환경변수에 넣어넣고 끌고와도 됨.)
+                            def newTag = "1.0.2" // 이미지 빌드할 때 사용한 태그를 동일하게 사용 (환경변수에 넣어넣고 끌고와도 됨.)
 
                             // msa-chart/charts/<service>/values.yaml 파일 내의 image 태그를 교체
                             // sed: 스트림 편집기(stream editor), 텍스트 파일을 수정하는 데 사용.
