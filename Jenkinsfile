@@ -8,6 +8,7 @@ pipeline {
         SERVICE_DIRS = "config-service,discovery-service,gateway-service,user-service,ordering-service,product-service"
         ECR_URL = "872651651829.dkr.ecr.ap-northeast-2.amazonaws.com"
         REGION = "ap-northeast-2"
+        K8S_REPO_CRED = "K8S_REPO_CRED"
     }
     stages {
         // 각 작업 단위를 스테이지로 나누어서 작성 가능.
